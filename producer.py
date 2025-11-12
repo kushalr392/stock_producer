@@ -1,10 +1,11 @@
 import os
+import random
+import time
+import json
+import logging
 from kafka import KafkaProducer
 from kafka.errors import KafkaError
 from kafka.admin import KafkaAdminClient, NewTopic
-from time import sleep
-import json
-import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -20,6 +21,12 @@ SECURITY_PROTOCOL = os.environ.get("SECURITY_PROTOCOL", "SASL_PLAINTEXT")
 SASL_MECHANISM = os.environ.get("SASL_MECHANISM", "SCRAM-SHA-512")
 SASL_PLAIN_USERNAME = os.environ.get("SASL_PLAIN_USERNAME", "")
 SASL_PLAIN_PASSWORD = os.environ.get("SASL_PLAIN_PASSWORD", "")
+
+# List of 20 company symbols
+COMPANY_SYMBOLS = [
+    "AAPL", "MSFT", "GOOG", "AMZN", "TSLA", "FB", "NVDA", "JPM", "V", "UNH",
+    "HD", "PG", "MA", "BAC", "DIS", "CMCSA", "PYPL", "ADBE", "NFLX", "KO"
+]
 
 # Function to create topic
 def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
@@ -45,7 +52,6 @@ def create_kafka_topic(topic_name, num_partitions=1, replication_factor=1):
 create_kafka_topic(KAFKA_TOPIC)
 create_kafka_topic(DEAD_LETTER_TOPIC)
 
-
 # Kafka producer configuration
 producer = KafkaProducer(
     bootstrap_servers=KAFKA_BOOTSTRAP_SERVERS,
@@ -67,27 +73,39 @@ def send_message(topic, message, retry_count=0):
     except KafkaError as e:
         logging.error(f"Failed to send message: {e}")
         if retry_count < MAX_RETRIES:
-            sleep(RETRY_BACKOFF_MS / 1000)
+            time.sleep(RETRY_BACKOFF_MS / 1000)
             logging.info(f"Retrying message (attempt {retry_count + 1})...")
             send_message(topic, message, retry_count + 1)
         else:
             logging.error(f"Max retries reached. Sending to dead-letter topic: {DEAD_LETTER_TOPIC}")
-            send_message(DEAD_LETTER_TOPIC, message) # Send to dead-letter topic
+            send_message(DEAD_LETTER_TOPIC, message)
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
 
-
 if __name__ == '__main__':
-    # Example stock data
-    stock_data = {
-        'symbol': 'AAPL',
-        'price': 150.25,
-        'timestamp': '2024-10-27T10:00:00Z'
-    }
+    while True:
+        # Select a random company symbol
+        symbol = random.choice(COMPANY_SYMBOLS)
 
-    # Send the stock data to Kafka
-    send_message(KAFKA_TOPIC, stock_data)
+        # Generate random price
+        price = round(random.uniform(100, 200), 2)
+
+        # Get current timestamp
+        timestamp = time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
+
+        # Create stock data
+        stock_data = {
+            'symbol': symbol,
+            'price': price,
+            'timestamp': timestamp
+        }
+
+        # Send the stock data to Kafka
+        send_message(KAFKA_TOPIC, stock_data)
+
+        # Wait for a short period before sending the next message
+        time.sleep(1)  # Send every 1 second
 
     # Optional: Flush the producer to ensure all messages are sent
-    producer.flush()
-    producer.close() # Close producer after sending
+    # producer.flush()
+    # producer.close() # Close producer after sending -  removed as it's a continuous producer now
