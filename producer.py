@@ -21,7 +21,12 @@ except ValueError:
     logging.warning("RETRY_BACKOFF_MS is not a valid integer. Using default value of 1000.")
     RETRY_BACKOFF_MS = 1000
 
-MAX_RETRIES = int(os.environ.get("MAX_RETRIES", 3))
+try:
+    MAX_RETRIES = int(os.environ.get("MAX_RETRIES", 3))
+except ValueError:
+    logging.warning("MAX_RETRIES is not a valid integer. Using default value of 3.")
+    MAX_RETRIES = 3
+
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "stock_topic_dlq")
 SECURITY_PROTOCOL = os.environ.get("SECURITY_PROTOCOL", "SASL_PLAINTEXT")
 SASL_MECHANISM = os.environ.get("SASL_MECHANISM", "SCRAM-SHA-512")
