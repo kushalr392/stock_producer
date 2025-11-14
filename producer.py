@@ -14,7 +14,13 @@ logging.basicConfig(level=logging.INFO,
 # Load configuration from environment variables
 KAFKA_BOOTSTRAP_SERVERS = os.environ.get("KAFKA_BOOTSTRAP_SERVERS", "localhost:9092")
 KAFKA_TOPIC = os.environ.get("KAFKA_TOPIC", "stock_topic")
-RETRY_BACKOFF_MS = int(os.environ.get("RETRY_BACKOFF_MS", 1000))
+
+try:
+    RETRY_BACKOFF_MS = int(os.environ.get("RETRY_BACKOFF_MS", 1000))
+except ValueError:
+    logging.warning("RETRY_BACKOFF_MS is not a valid integer. Using default value of 1000.")
+    RETRY_BACKOFF_MS = 1000
+
 MAX_RETRIES = int(os.environ.get("MAX_RETRIES", 3))
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "stock_topic_dlq")
 SECURITY_PROTOCOL = os.environ.get("SECURITY_PROTOCOL", "SASL_PLAINTEXT")
